@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Student Result</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    .fail-row { background-color: #ffcccc; }
+  </style>
+</head>
+<body class="container my-5">
+  <div class="card shadow p-4" id="result-section">
+    <h3 class="text-center mb-4">Result for {{ name }}</h3>
+
+    <table class="table table-bordered text-center">
+      <thead class="table-light">
+        <tr>
+          <th>Subject</th>
+          <th>Marks Obtained</th>
+          <th>Max Marks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for subject, mark, max_mark in subjects %}
+        <tr class="{% if subject in failed_subjects %}fail-row{% endif %}">
+          <td>{{ subject }}</td>
+          <td>{{ mark }}</td>
+          <td>{{ max_mark }}</td>
+        </tr>
+        {% endfor %}
+        <tr style="background-color: #dff6fd;">
+          <td><strong>Total</strong></td>
+          <td colspan="2"><strong>{{ total }} / {{ max_total }}</strong></td>
+        </tr>
+        <tr style="background-color: #defde0;">
+          <td><strong>Percentage</strong></td>
+          <td colspan="2"><strong>{{ percentage }}%</strong></td>
+        </tr>
+        <tr style="background-color: #fffccc;">
+          <td><strong>Grade</strong></td>
+          <td colspan="2"><strong>{{ grade }}</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    {% if failed_subjects|length > 0 %}
+      <div class="alert alert-danger text-center">
+        ⚠️ You have failed in {{ failed_subjects|length }} subject(s): {{ failed_subjects | join(', ') }}
+      </div>
+    {% endif %}
+
+    <div class="text-center my-3">
+      <h5>{{ feedback }}</h5>
+    </div>
+
+    <form action="/export_pdf" method="POST">
+      <input type="hidden" name="name" value="{{ name }}">
+      <input type="hidden" name="subjects" value='{{ subjects | tojson | safe }}'>
+      <input type="hidden" name="total" value="{{ total }}">
+      <input type="hidden" name="max_total" value="{{ max_total }}">
+      <input type="hidden" name="percentage" value="{{ percentage }}">
+      <input type="hidden" name="grade" value="{{ grade }}">
+      <div class="text-center">
+        <button type="submit" class="btn btn-danger">Export as PDF</button>
+      </div>
+    </form>
+
+    <div class="text-center mt-3">
+      <button class="btn btn-success" onclick="saveImage()">Save as Image</button>
+      <a href="/" class="btn btn-outline-secondary ms-2">Back</a>
+    </div>
+
+    <p class="text-muted text-center mt-4">
+      🔒 This tool does not store any data. Everything runs in your browser.
+    </p>
+  </div>
+
+  <script>
+    function saveImage() {
+      html2canvas(document.getElementById('result-section')).then(canvas => {
+        const link = document.createElement('a');
+        link.download = '{{ name }}_Result.png';
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    }
+  </script>
+</body>
+</html>
