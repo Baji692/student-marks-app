@@ -80,7 +80,7 @@ student-marks-app/
 
 1. Clone the repository:
 
-git clone https://github.com/YOUR_USERNAME/student-marks-app.git
+git clone https://github.com/Baji692/student-marks-app.git
 cd student-marks-app
 
 
