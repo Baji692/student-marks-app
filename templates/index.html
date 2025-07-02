@@ -7,21 +7,20 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 
   <style>
-  #splash {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    background-color: white;
-    z-index: 9999;
-  }
+    #splash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      background-color: white;
+      z-index: 9999;
+    }
 
-  #main-content {
-    display: none;
-  }
-</style>
-
+    #main-content {
+      display: none;
+    }
+  </style>
 
   <script>
     function generateSubjectFields() {
@@ -44,11 +43,6 @@
           </div>`;
       }
     }
-
-    window.onload = () => {
-      document.getElementById("num_subjects").value = 5;
-      generateSubjectFields();
-    };
   </script>
 </head>
 <body class="bg-light">
@@ -74,7 +68,7 @@
 
         <div class="mb-3">
           <label class="form-label">Number of Subjects</label>
-          <input type="number" name="num_subjects" id="num_subjects" class="form-control" min="1" max="15" onchange="generateSubjectFields()" required />
+          <input type="number" name="num_subjects" id="num_subjects" class="form-control" min="1" max="15" value="5" onchange="generateSubjectFields()" required />
         </div>
 
         <div id="subject-fields"></div>
@@ -91,17 +85,18 @@
     &copy; Baji Babu Miriyala
   </footer>
 
+  <!-- JS after content is loaded -->
   <script>
-  window.addEventListener("load", () => {
-    setTimeout(() => {
-      const splash = document.getElementById("splash");
-      if (splash) splash.style.display = "none";
-      const mainContent = document.getElementById("main-content");
-      if (mainContent) mainContent.style.display = "block";
-    }, 2000);
-  });
-</script>
-
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        const splash = document.getElementById("splash");
+        const mainContent = document.getElementById("main-content");
+        if (splash) splash.style.display = "none";
+        if (mainContent) mainContent.style.display = "block";
+        generateSubjectFields(); // re-initialize form
+      }, 2000);
+    });
+  </script>
 
 </body>
 </html>
