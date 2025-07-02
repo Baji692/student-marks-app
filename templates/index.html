@@ -21,29 +21,6 @@
       display: none;
     }
   </style>
-
-  <script>
-    function generateSubjectFields() {
-      const count = document.getElementById("num_subjects").value;
-      const container = document.getElementById("subject-fields");
-      container.innerHTML = "";
-
-      for (let i = 1; i <= count; i++) {
-        container.innerHTML += `
-          <div class="row mb-2">
-            <div class="col-4">
-              <input type="text" name="subject_name_${i}" class="form-control" placeholder="Subject ${i} Name" required>
-            </div>
-            <div class="col-4">
-              <input type="number" name="subject_mark_${i}" class="form-control" placeholder="Marks Obtained" required>
-            </div>
-            <div class="col-4">
-              <input type="number" name="subject_max_${i}" class="form-control" placeholder="Max Marks" required>
-            </div>
-          </div>`;
-      }
-    }
-  </script>
 </head>
 <body class="bg-light">
 
@@ -85,15 +62,37 @@
     &copy; Baji Babu Miriyala
   </footer>
 
-  <!-- JS after content is loaded -->
+  <!-- Scripts -->
   <script>
-    window.addEventListener("load", () => {
+    function generateSubjectFields() {
+      const count = document.getElementById("num_subjects").value;
+      const container = document.getElementById("subject-fields");
+      container.innerHTML = "";
+
+      for (let i = 1; i <= count; i++) {
+        container.innerHTML += `
+          <div class="row mb-2">
+            <div class="col-4">
+              <input type="text" name="subject_name_${i}" class="form-control" placeholder="Subject ${i} Name" required>
+            </div>
+            <div class="col-4">
+              <input type="number" name="subject_mark_${i}" class="form-control" placeholder="Marks Obtained" required>
+            </div>
+            <div class="col-4">
+              <input type="number" name="subject_max_${i}" class="form-control" placeholder="Max Marks" required>
+            </div>
+          </div>`;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
       setTimeout(() => {
-        const splash = document.getElementById("splash");
-        const mainContent = document.getElementById("main-content");
-        if (splash) splash.style.display = "none";
-        if (mainContent) mainContent.style.display = "block";
-        generateSubjectFields(); // re-initialize form
+        // Hide splash
+        document.getElementById("splash").style.display = "none";
+        // Show main content
+        document.getElementById("main-content").style.display = "block";
+        // Generate subject fields (initial)
+        generateSubjectFields();
       }, 2000);
     });
   </script>
