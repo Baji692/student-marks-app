@@ -8,6 +8,7 @@ import json
 app = Flask(__name__)
 app.secret_key = 'admin_secret_key'
 
+# Configure database
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL',
     'postgresql://postgres:admin123@localhost:5432/studentmarks'
@@ -25,7 +26,7 @@ class Result(db.Model):
     percentage = db.Column(db.Float)
     grade = db.Column(db.String(50))
 
-# Custom Jinja2 Filter
+# Custom filter for JSON parsing in Jinja2
 @app.template_filter('parse_json')
 def parse_json_filter(text):
     try:
@@ -33,11 +34,12 @@ def parse_json_filter(text):
     except Exception:
         return []
 
-# Routes
+# Home page
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# Result calculation route
 @app.route('/result', methods=['POST'])
 def result():
     name = request.form['name']
@@ -54,12 +56,16 @@ def result():
         max_mark = int(request.form.get(f"subject_max_{i}"))
         total += mark
         max_total += max_mark
-        if mark < 35:
+
+        # ✅ NEW fail logic: less than 35% of max marks
+        if mark < (0.35 * max_mark):
             failed_subjects.append(subject_name)
+
         subjects.append((subject_name, mark, max_mark))
 
     percentage = (total / max_total) * 100
 
+    # Grade logic
     if percentage >= 90:
         grade = 'A+ (Outstanding)'
     elif percentage >= 80:
@@ -73,12 +79,14 @@ def result():
     else:
         grade = 'F (Fail)'
 
+    # Feedback message
     feedback = (
         "🎉 Excellent performance!" if percentage >= 85 else
         "📈 You're on track, keep going!" if percentage >= 65 else
         "⚠️ You can do better next time."
     )
 
+    # Save to database
     new_result = Result(
         student_name=name,
         subject_data=json.dumps(subjects),
@@ -102,6 +110,7 @@ def result():
         failed_subjects=failed_subjects
     )
 
+# PDF export
 @app.route('/export_pdf', methods=['POST'])
 def export_pdf():
     try:
@@ -154,7 +163,7 @@ def export_pdf():
         print("PDF Export Error:", e)
         return f"An error occurred while generating the PDF: {e}", 500
 
-# Admin Routes
+# Admin login
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
@@ -167,6 +176,7 @@ def admin_login():
             return render_template('login.html', error="Invalid credentials")
     return render_template('login.html')
 
+# View saved results (admin only)
 @app.route('/results')
 def view_results():
     if not session.get('admin_logged_in'):
@@ -174,15 +184,17 @@ def view_results():
     all_results = Result.query.order_by(Result.id.desc()).all()
     return render_template('admin_results.html', results=all_results)
 
+# Logout
 @app.route('/logout')
 def logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('admin_login'))
 
-# Create DB tables
+# Create DB tables (only runs if they don't exist)
 with app.app_context():
     db.create_all()
 
+# Run the app
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
