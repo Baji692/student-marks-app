@@ -15,6 +15,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+# Model
 class Result(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_name = db.Column(db.String(100))
@@ -24,6 +25,15 @@ class Result(db.Model):
     percentage = db.Column(db.Float)
     grade = db.Column(db.String(50))
 
+# Custom Jinja2 Filter
+@app.template_filter('parse_json')
+def parse_json_filter(text):
+    try:
+        return json.loads(text)
+    except Exception:
+        return []
+
+# Routes
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -144,7 +154,7 @@ def export_pdf():
         print("PDF Export Error:", e)
         return f"An error occurred while generating the PDF: {e}", 500
 
-# ---------- Admin Routes ----------
+# Admin Routes
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
@@ -169,11 +179,10 @@ def logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('admin_login'))
 
-# Ensure DB table is created
+# Create DB tables
 with app.app_context():
     db.create_all()
 
-# Run
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
