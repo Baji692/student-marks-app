@@ -1,10 +1,29 @@
 from flask import Flask, render_template, request, send_file
+from flask_sqlalchemy import SQLAlchemy
 from fpdf import FPDF
 import os
 import io
 import json
 
 app = Flask(__name__)
+
+# PostgreSQL connection (Render or local fallback)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL',
+    'postgresql://postgres:yourpassword@localhost:5432/studentmarks'
+)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Result table definition
+class Result(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_name = db.Column(db.String(100))
+    subject_data = db.Column(db.Text)  # JSON string
+    total = db.Column(db.Integer)
+    max_total = db.Column(db.Integer)
+    percentage = db.Column(db.Float)
+    grade = db.Column(db.String(50))
 
 @app.route('/')
 def index():
@@ -45,12 +64,22 @@ def result():
     else:
         grade = 'F (Fail)'
 
-    if percentage >= 85:
-        feedback = "🎉 Excellent performance!"
-    elif percentage >= 65:
-        feedback = "📈 You're on track, keep going!"
-    else:
-        feedback = "⚠️ You can do better next time."
+    feedback = (
+        "🎉 Excellent performance!" if percentage >= 85 else
+        "📈 You're on track, keep going!" if percentage >= 65 else
+        "⚠️ You can do better next time."
+    )
+
+    # Save to PostgreSQL
+    db.session.add(Result(
+        student_name=name,
+        subject_data=json.dumps(subjects),
+        total=total,
+        max_total=max_total,
+        percentage=round(percentage, 2),
+        grade=grade
+    ))
+    db.session.commit()
 
     return render_template(
         'result.html',
@@ -117,5 +146,6 @@ def export_pdf():
         return f"An error occurred while generating the PDF: {e}", 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
