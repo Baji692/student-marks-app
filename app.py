@@ -7,30 +7,28 @@ import json
 
 app = Flask(__name__)
 
-# Use PostgreSQL database from Render, fallback to local DB for development
+# Use PostgreSQL on Render if available, else local DB
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL',
-    'postgresql://postgres:admin123@localhost:5432/studentmarks'
+    'postgresql://postgres:admin123@localhost:5432/studentmarks'  # replace with your local DB info if testing locally
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Define the Result table schema
+# Database model
 class Result(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_name = db.Column(db.String(100))
-    subject_data = db.Column(db.Text)  # stores subjects JSON string
+    subject_data = db.Column(db.Text)  # stores subjects JSON
     total = db.Column(db.Integer)
     max_total = db.Column(db.Integer)
     percentage = db.Column(db.Float)
     grade = db.Column(db.String(50))
 
-# Home page route
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Result calculation route
 @app.route('/result', methods=['POST'])
 def result():
     name = request.form['name']
@@ -72,7 +70,7 @@ def result():
         "⚠️ You can do better next time."
     )
 
-    # Save to PostgreSQL
+    # Save result to database
     new_result = Result(
         student_name=name,
         subject_data=json.dumps(subjects),
@@ -96,7 +94,6 @@ def result():
         failed_subjects=failed_subjects
     )
 
-# PDF export route
 @app.route('/export_pdf', methods=['POST'])
 def export_pdf():
     try:
@@ -149,9 +146,11 @@ def export_pdf():
         print("PDF Export Error:", e)
         return f"An error occurred while generating the PDF: {e}", 500
 
-# ✅ Create DB tables when the app starts
+# ✅ Automatically create tables on startup
 with app.app_context():
     db.create_all()
 
+# ✅ Final run command — works locally and on Render
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))  # 5000 for local, dynamic for Render
+    app.run(host='0.0.0.0', port=port, debug=True)
