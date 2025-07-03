@@ -7,28 +7,30 @@ import json
 
 app = Flask(__name__)
 
-# PostgreSQL connection (Render or local fallback)
+# Use PostgreSQL database from Render, fallback to local DB for development
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL',
-    'postgresql://postgres:yourpassword@localhost:5432/studentmarks'
+    'postgresql://postgres:admin123@localhost:5432/studentmarks'
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Result table definition
+# Define the Result table schema
 class Result(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_name = db.Column(db.String(100))
-    subject_data = db.Column(db.Text)  # JSON string
+    subject_data = db.Column(db.Text)  # stores subjects JSON string
     total = db.Column(db.Integer)
     max_total = db.Column(db.Integer)
     percentage = db.Column(db.Float)
     grade = db.Column(db.String(50))
 
+# Home page route
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# Result calculation route
 @app.route('/result', methods=['POST'])
 def result():
     name = request.form['name']
@@ -71,14 +73,15 @@ def result():
     )
 
     # Save to PostgreSQL
-    db.session.add(Result(
+    new_result = Result(
         student_name=name,
         subject_data=json.dumps(subjects),
         total=total,
         max_total=max_total,
         percentage=round(percentage, 2),
         grade=grade
-    ))
+    )
+    db.session.add(new_result)
     db.session.commit()
 
     return render_template(
@@ -93,6 +96,7 @@ def result():
         failed_subjects=failed_subjects
     )
 
+# PDF export route
 @app.route('/export_pdf', methods=['POST'])
 def export_pdf():
     try:
@@ -145,7 +149,9 @@ def export_pdf():
         print("PDF Export Error:", e)
         return f"An error occurred while generating the PDF: {e}", 500
 
+# ✅ Create DB tables when the app starts
+with app.app_context():
+    db.create_all()
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
