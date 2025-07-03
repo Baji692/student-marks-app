@@ -46,7 +46,7 @@
           <td>{{ result.grade }}</td>
           <td>
             <ul>
-              {% for subject in result.subject_data | tojson | loads %}
+              {% for subject in result.subject_data | parse_json %}
               <li>{{ subject[0] }}: {{ subject[1] }}/{{ subject[2] }}</li>
               {% endfor %}
             </ul>
