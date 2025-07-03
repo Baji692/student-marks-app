@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, send_file
 from flask_sqlalchemy import SQLAlchemy
 from fpdf import FPDF
 import os
@@ -6,20 +6,19 @@ import io
 import json
 
 app = Flask(__name__)
+app.secret_key = 'admin_secret_key'
 
-# Use PostgreSQL on Render if available, else local DB
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL',
-    'postgresql://postgres:admin123@localhost:5432/studentmarks'  # replace with your local DB info if testing locally
+    'postgresql://postgres:admin123@localhost:5432/studentmarks'
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Database model
 class Result(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_name = db.Column(db.String(100))
-    subject_data = db.Column(db.Text)  # stores subjects JSON
+    subject_data = db.Column(db.Text)
     total = db.Column(db.Integer)
     max_total = db.Column(db.Integer)
     percentage = db.Column(db.Float)
@@ -70,7 +69,6 @@ def result():
         "⚠️ You can do better next time."
     )
 
-    # Save result to database
     new_result = Result(
         student_name=name,
         subject_data=json.dumps(subjects),
@@ -146,11 +144,36 @@ def export_pdf():
         print("PDF Export Error:", e)
         return f"An error occurred while generating the PDF: {e}", 500
 
-# ✅ Automatically create tables on startup
+# ---------- Admin Routes ----------
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if username == 'admin' and password == 'admin123':
+            session['admin_logged_in'] = True
+            return redirect(url_for('view_results'))
+        else:
+            return render_template('login.html', error="Invalid credentials")
+    return render_template('login.html')
+
+@app.route('/results')
+def view_results():
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin_login'))
+    all_results = Result.query.order_by(Result.id.desc()).all()
+    return render_template('admin_results.html', results=all_results)
+
+@app.route('/logout')
+def logout():
+    session.pop('admin_logged_in', None)
+    return redirect(url_for('admin_login'))
+
+# Ensure DB table is created
 with app.app_context():
     db.create_all()
 
-# ✅ Final run command — works locally and on Render
+# Run
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # 5000 for local, dynamic for Render
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
