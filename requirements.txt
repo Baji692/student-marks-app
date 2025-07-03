@@ -1,2 +1,4 @@
-flask
+Flask
 fpdf
+psycopg2-binary
+flask_sqlalchemy
