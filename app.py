@@ -5,21 +5,24 @@ import os
 import io
 import json
 
-# --------------------
+# -------------------------------------------------
 # App setup
-# --------------------
+# -------------------------------------------------
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "admin_secret_key")
 
-# --------------------
-# Database configuration (Render-safe)
-# --------------------
+# -------------------------------------------------
+# Database configuration (Render-safe + Flask 3.x safe)
+# -------------------------------------------------
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
 
-# Fix Render postgres:// issue
+# 🔥 CRITICAL FIX: remove hidden spaces/newlines
+DATABASE_URL = DATABASE_URL.strip()
+
+# 🔥 Render uses postgres:// but SQLAlchemy requires postgresql://
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -28,9 +31,9 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-# --------------------
-# DB initialization guard (Flask 3.x safe)
-# --------------------
+# -------------------------------------------------
+# DB initialization guard (Flask 3.x compatible)
+# -------------------------------------------------
 db_initialized = False
 
 @app.before_request
@@ -41,11 +44,12 @@ def initialize_database():
             db.create_all()
             db_initialized = True
         except Exception as e:
+            # Do NOT crash the app
             print("Database initialization error:", e)
 
-# --------------------
+# -------------------------------------------------
 # Model
-# --------------------
+# -------------------------------------------------
 class Result(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_name = db.Column(db.String(100))
@@ -55,9 +59,9 @@ class Result(db.Model):
     percentage = db.Column(db.Float)
     grade = db.Column(db.String(50))
 
-# --------------------
+# -------------------------------------------------
 # Jinja filter
-# --------------------
+# -------------------------------------------------
 @app.template_filter("parse_json")
 def parse_json_filter(text):
     try:
@@ -65,9 +69,9 @@ def parse_json_filter(text):
     except Exception:
         return []
 
-# --------------------
+# -------------------------------------------------
 # Routes
-# --------------------
+# -------------------------------------------------
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -157,27 +161,26 @@ def export_pdf():
         pdf.ln(5)
 
         pdf.set_font("Arial", "B", 12)
-        pdf.set_fill_color(230, 230, 230)
-        pdf.cell(80, 10, "Subject", 1, 0, "C", True)
-        pdf.cell(55, 10, "Marks Obtained", 1, 0, "C", True)
-        pdf.cell(55, 10, "Max Marks", 1, 1, "C", True)
+        pdf.cell(80, 10, "Subject", 1)
+        pdf.cell(55, 10, "Marks Obtained", 1)
+        pdf.cell(55, 10, "Max Marks", 1, ln=True)
 
         pdf.set_font("Arial", "", 12)
         for subject_name, obtained, max_marks in subjects:
             pdf.cell(80, 10, subject_name, 1)
-            pdf.cell(55, 10, str(obtained), 1, 0, "C")
-            pdf.cell(55, 10, str(max_marks), 1, 1, "C")
+            pdf.cell(55, 10, str(obtained), 1)
+            pdf.cell(55, 10, str(max_marks), 1, ln=True)
 
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(80, 10, "Total", 1, 0, "C")
-        pdf.cell(55, 10, str(total), 1, 0, "C")
-        pdf.cell(55, 10, str(max_total), 1, 1, "C")
+        pdf.cell(80, 10, "Total", 1)
+        pdf.cell(55, 10, str(total), 1)
+        pdf.cell(55, 10, str(max_total), 1, ln=True)
 
-        pdf.cell(80, 10, "Percentage", 1, 0, "C")
-        pdf.cell(110, 10, f"{percentage}%", 1, 1, "C")
+        pdf.cell(80, 10, "Percentage", 1)
+        pdf.cell(110, 10, f"{percentage}%", 1, ln=True)
 
-        pdf.cell(80, 10, "Grade", 1, 0, "C")
-        pdf.cell(110, 10, grade, 1, 1, "C")
+        pdf.cell(80, 10, "Grade", 1)
+        pdf.cell(110, 10, grade, 1, ln=True)
 
         pdf_bytes = pdf.output(dest="S").encode("latin-1")
         pdf_output = io.BytesIO(pdf_bytes)
@@ -213,9 +216,9 @@ def logout():
     session.pop("admin_logged_in", None)
     return redirect(url_for("admin_login"))
 
-# --------------------
+# -------------------------------------------------
 # Run app (Render compatible)
-# --------------------
+# -------------------------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
